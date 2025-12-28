@@ -1,0 +1,23 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Mac/Linux
+.DS_Store
+.env
+
+# Testing
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# APEIRON Specific
+templates/**/*.user # Just in case
+test-project/
+
+# Agent & Education (Local Only)
+.agent/
+APEIRON_ACADEMY.md
