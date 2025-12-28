@@ -11,7 +11,8 @@ yarn-error.log
 coverage/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
 
 # APEIRON Specific
@@ -21,3 +22,12 @@ test-project/
 # Agent & Education (Local Only)
 .agent/
 APEIRON_ACADEMY.md
+
+# Build Clutter (.NET)
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Apeiron.Api/Apeiron.Api.csproj" />
+    <Project Path="src/Apeiron.Application/Apeiron.Application.csproj" />
+    <Project Path="src/Apeiron.Domain/Apeiron.Domain.csproj" />
+    <Project Path="src/Apeiron.Infrastructure/Apeiron.Infrastructure.csproj" />
+  </Folder>
+</Solution>

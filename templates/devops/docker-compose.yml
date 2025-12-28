@@ -1,0 +1,35 @@
+services:
+  # Database (PostgreSQL)
+  postgres:
+    image: postgres:16-alpine
+    container_name: apeiron-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: Apeiron
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # Caching (Redis)
+  redis:
+    image: redis:alpine
+    container_name: apeiron-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  # Logging (Seq)
+  seq:
+    image: datalust/seq:latest
+    container_name: apeiron-seq
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+    restart: always
+
+volumes:
+  postgres_data:
