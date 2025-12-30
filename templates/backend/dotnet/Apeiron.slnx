@@ -5,4 +5,7 @@
     <Project Path="src/Apeiron.Domain/Apeiron.Domain.csproj" />
     <Project Path="src/Apeiron.Infrastructure/Apeiron.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Apeiron.Tests/Apeiron.Tests.csproj" />
+  </Folder>
 </Solution>

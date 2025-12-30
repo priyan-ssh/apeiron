@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 
 namespace Apeiron.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public abstract class BaseApiController : ControllerBase
 {
 }

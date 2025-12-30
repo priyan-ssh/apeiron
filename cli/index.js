@@ -72,7 +72,12 @@ program
             await fs.copy(templatesDir, fullPath, {
                 filter: (src) => {
                     const basename = path.basename(src);
-                    return basename !== 'node_modules' && basename !== '.git';
+                    return basename !== 'node_modules'
+                        && basename !== '.git'
+                        && basename !== 'bin'
+                        && basename !== 'obj'
+                        && basename !== '.vs'
+                        && basename !== '.idea';
                 }
             });
 

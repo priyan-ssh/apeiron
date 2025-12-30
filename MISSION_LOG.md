@@ -97,8 +97,45 @@ This log captures the core technical questions and design decisions made during 
 **Q: Should the test project be part of the template?**
 *   **A:** **YES.** A professional template includes a testing framework by default. It signals that the generated project is ready for industrial use, not just a prototype. We include `tests/` for Unit, Integration, and Architecture (NetArchTest) tests.
 
+**Q: Why xUnit and not NUnit/MSTest?**
+*   **A:** **Isolation & Modernity.**
+    *   **Instance per Test**: xUnit creates a *new instance* of the test class for every single test method. This guarantees zero "State Leakage" (variables from Test A won't mess up Test B). NUnit reuses the class instance.
+    *   **Idiomatic C#**: xUnit uses Constructors for `Setup` and `IDisposable` for `Teardown`, rather than magic attributes (`[SetUp]`). It feels more like writing real code.
+    *   **Parallelism**: It is designed for parallel execution by default, making suites run faster.
+
+**Q: Why `public partial class Program { }`?**
+*   **A:** **Integration Testing.** Top-level statements (standard in .NET 6+) compile to an internal, hidden `Program` class. To run Integration Tests using `WebApplicationFactory<Program>`, the test project needs to "see" this class. Adding this one line exposes the hidden class to the outside world, effectively making it `public`.
+
+**Q: Why reference `Application.Models` in `Program.cs`?**
+*   **A:** **Strongly Typed Config.** We store `FeatureFlags` (EnableAuth, EnableOTEL) in `appsettings.json`. To read them safely, we deserialize the JSON into the C# `FeatureFlags` class, which lives in `Application/Common/Models`. This prevents "Magic String" errors when toggling features.
+    
 **Q: Will I lose my database data if I do `docker compose down`?**
 *   **A:** **NO.** We use **Docker Volumes**. In `docker-compose.yml`, the `postgres_data` volume maps the internal database files to your host machine's disk. Even if the container is deleted, the data lives on. Only `docker compose down -v` (with the `-v` flag) will wipe the data.
+
+---
+
+## 🛑 Retrospective: Did we Overengineer it?
+**Verdict:** **No.** We built a **Platform**, not a Prototype.
+
+### 1. The "Day 2" Defense
+Most templates are optimized for "Day 1" (File -> New Project -> Run). They look simple but fall apart on "Day 2":
+*   *"Where do I put this validation logic?"* -> Bloated Controllers.
+*   *"Why is the API slow?"* -> No Caching or Tracing.
+*   *"The app crashed in production!"* -> No Global Exception Handling or Structured Logs.
+
+**APEIRON** solves Day 2 problems on Day 1.
+
+### 2. Complexity on Demand (Feature Flags)
+We added complexity (HybridCache, OpenTelemetry, Auth), but we **tamed it** with Feature Flags.
+*   **Junior Dev Mode:** Set flags to `false`. You have a simple CRUD API.
+*   **Senior Dev Mode:** Set flags to `true`. You have a distributed, observable, secured system.
+
+### 3. Clean Architecture Costs
+*   **Cost:** More files (DTOs, Interfaces).
+*   **Gain:** You can change the Database, the Auth Provider, or the Cache without rewriting your business logic.
+
+This is **Industrial Grade**. It feels "heavy" because it carries the weight of reliability.
+
 
 **Q: Why don't we put all 'Models' in the Domain?**
 *   **A:** **The Hierarchy of Truth.** 
@@ -279,6 +316,39 @@ This log captures the core technical questions and design decisions made during 
         *   `services.AddApplication()` (Fluent/Clean)
         *   Instead of: `DependencyInjection.AddApplication(services)` (Clumsy/Ugly).
     *   **The Goal**: It allows us to extend Microsoft's builtin types with our own APEIRON logic without hacking their source code.
+
+**Q: What does `where TRequest : IRequest<TResponse>` mean in the ValidationBehavior?**
+*   **A:** **The VIP List (Generic Constraints).**
+    *   **The Syntax**: This line tells C#: "This Behavior implementation is **only** for classes that implement `IRequest`."
+    *   **The Why**: We don't want to try and validate a random `string` or `int`. We only want to intercept **MediatR Requests**.
+    *   **The `IPipelineBehavior`**: This interface is the "Middleman". It says "I sit between the Controller and the Handler."
+    *   It allows us to run code **before** (Validation) and **after** (Logging) the main logic, without touching the Handler itself.
+
+### 🔐 Security & Observability (Phase 2.5)
+**Q: How do we update/change API Versioning?**
+*   **A:** **The "V" Strategy.**
+    *   **Config**: In `Program.cs`, we set `DefaultApiVersion` to 1.0.
+    *   **Usage**: In `BaseApiController`, we use `[ApiVersion("1.0")]` and `[Route("api/v{version:apiVersion}/[controller]")]`.
+    *   **To Change**: To allow `v2`, you simply add `[ApiVersion("2.0")]` to a new Controller. The system handles the routing automatically.
+
+**Q: What is the `AuditingInterceptor`?**
+*   **A:** **The Automatic Scribe.**
+    *   **The Problem**: Manually setting `CreatedAt = DateTime.UtcNow` in every single Service method is tedious and error-prone.
+    *   **The Solution**: An EF Core **Interceptor** that sits between your app and the database.
+    *   **How it works**: When you call `SaveChanges()`, the Interceptor pauses the execution, scans every entity being saved, checks if it inherits from `BaseEntity`, and automatically injects the current UTC time into `CreatedAt` (for new rows) or `ModifiedAt` (for updates). It guarantees audit trails can never be forgotten.
+
+**Q: How does the `JwtTokenGenerator` work?**
+*   **A:** **The Digital Passport Printer.**
+    *   **Symmetric Security**: It uses a secret key (from `appsettings.json`) that only the server knows. This key is like the "Government Seal."
+    *   **The Claims**: It takes the User's ID and Email and stamps them into the token payload (Claims).
+    *   **The Signature**: It hashes the data + the secret key using `HmacSha256`. 
+    *   **The Result**: If a user tries to tamper with the token (e.g., change "User" to "Admin"), the hash won't match, and the API will reject it. It allows stateless auth—we don't need to check the DB for every request, we just check the signature.
+
+**Q: Can we use Feature Flags for Caching/Auth?**
+*   **A:** **Yes ("The Kill Switch").** 
+    *   It is a good idea for local development speed.
+    *   **How to**: Add `EnableAuth: false` in `appsettings.Development.json`. In `Program.cs`, wrap `app.UseAuthorization()` in an `if (config["EnableAuth"])` block.
+    *   **Warning**: If you disable Auth locally, you risk shipping bugs where protected routes fail in production. Use with caution.
 
 ---
 *Log generated by Friday Protocol.*

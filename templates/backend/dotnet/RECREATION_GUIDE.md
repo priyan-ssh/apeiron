@@ -98,6 +98,10 @@ dotnet add src/Apeiron.Api package OpenTelemetry.Extensions.Hosting
 dotnet add src/Apeiron.Api package OpenTelemetry.Instrumentation.AspNetCore
 dotnet add src/Apeiron.Api package OpenTelemetry.Instrumentation.Http
 dotnet add src/Apeiron.Api package OpenTelemetry.Exporter.OpenTelemetryProtocol
+dotnet add src/Apeiron.Infrastructure package System.IdentityModel.Tokens.Jwt
+dotnet add src/Apeiron.Api package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add src/Apeiron.Api package Asp.Versioning.Mvc
+dotnet add src/Apeiron.Api package Asp.Versioning.Mvc.ApiExplorer
 ```
 
 ## 6. Phase 2.5: The DNA (Domain Entities)
@@ -107,6 +111,10 @@ We define the core entities in specific folders.
 ```bash
 # Allow Domain to use IdentityUser type for future-proofing
 dotnet add src/Apeiron.Domain package Microsoft.Extensions.Identity.Stores
+
+# Infrastructure: Interceptors
+Create `src/Apeiron.Infrastructure/Persistence/Interceptors/AuditingInterceptor.cs`.
+It must inherit `SaveChangesInterceptor` and set `CreatedAt`/`ModifiedAt`.
 ```
 
 Create folders: `src/Apeiron.Domain/Entities`
@@ -145,6 +153,8 @@ Create `src/Apeiron.Infrastructure/Repositories/`:
 #### 3. The Infrastructure Wire-Up
 Create `src/Apeiron.Infrastructure/DependencyInjection.cs`:
 This `AddInfrastructure` method registers the DbContext and Repositories.
+It must also register `services.AddHybridCache()` and the `AuditingInterceptor`.
+And `services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>()`.
 
 ## 9. Phase 3: The Nervous System (Application Services)
 
@@ -639,4 +649,24 @@ finally
 
 **Why Serilog?**
 Standard logs are just strings. Serilog logs are **Objects**. If you log `_logger.Information("Processed {ProjectId}", id)`, Serilog stores the `id` as a searchable field in your log database (like Seq).
+
+## 18. Phase 4: Final Polish (Config & Auth)
+
+#### 1. API Versioning
+Update `BaseApiController.cs`:
+```csharp
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+```
+Configure in `Program.cs` with `builder.Services.AddApiVersioning()`.
+
+#### 2. Authentication (JWT)
+1. Configure `Jwt` section in `appsettings.json`.
+2. Implement `JwtTokenGenerator` in Infrastructure.
+3. Add `builder.Services.AddAuthentication().AddJwtBearer()` in `Program.cs`.
+4. Add `app.UseAuthentication()` before `app.UseAuthorization()`.
+
+---
+**Congratulation!** You have rebuilt the APEIRON backend.
+
 

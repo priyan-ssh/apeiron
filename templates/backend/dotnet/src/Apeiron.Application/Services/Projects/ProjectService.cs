@@ -1,4 +1,5 @@
 using Apeiron.Application.Common.Models;
+using FluentValidation;
 using Apeiron.Application.Contracts.Projects;
 using Apeiron.Application.Interfaces.Projects;
 using Apeiron.Domain.Entities;
@@ -8,10 +9,12 @@ namespace Apeiron.Application.Services.Projects;
 public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepository;
+    private readonly IValidator<ProjectCreateRequest> _validator;
 
-    public ProjectService(IProjectRepository projectRepository)
+    public ProjectService(IProjectRepository projectRepository, IValidator<ProjectCreateRequest> validator)
     {
         _projectRepository = projectRepository;
+        _validator = validator;
     }
 
     public async Task<Result<List<ProjectResponse>>> GetAllAsync()
@@ -42,6 +45,8 @@ public class ProjectService : IProjectService
 
     public async Task<Result<ProjectResponse>> CreateAsync(ProjectCreateRequest request)
     {
+        _validator.ValidateAndThrow(request);
+
         var project = new Project
         {
             Id = Guid.NewGuid(),
@@ -58,6 +63,8 @@ public class ProjectService : IProjectService
 
     public async Task<Result> UpdateAsync(Guid id, ProjectCreateRequest request)
     {
+        _validator.ValidateAndThrow(request);
+        
         var project = await _projectRepository.GetByIdAsync(id);
 
         if (project is null)

@@ -9,25 +9,25 @@ This document defines the technical scope, features, and architecture of Project
 - **Dependency Injection:** Strict Lifetime management (Scoped for Services/Db, Singleton for Caching).
 
 ### Database & Data Access
-- **ORM:** EF Core 10 with `IQueryable` pattern.
-- **Migrations:** Auto-migration on startup (configurable via flag).
-- **Seeding:** `DataSeeder` for Roles/Users/Lookups.
-- **Auditing:** `SaveChangesInterceptor` to auto-fill `CreatedAt`, `ModifiedAt`, `CreatedBy`.
+- [x] **ORM:** EF Core 10 with `IQueryable` pattern.
+- [x] **Migrations:** Auto-migration on startup (configurable via flag).
+- [ ] **Seeding:** `DataSeeder` for Roles/Users/Lookups.
+- [x] **Auditing:** `SaveChangesInterceptor` to auto-fill `CreatedAt`, `ModifiedAt`, `CreatedBy`.
 
 ### API Surface
-- **Documentation:** Swagger / OpenAPI with JWT support.
-- **Versioning:** API Versioning enabled (e.g., `/api/v1/...`).
-- **Response Wrapper:** Standard `Result<T>` envelope for consistent JSON responses.
-- **Exception Handling:** Global `IExceptionHandler` implementation (ProblemDetails standard).
+- [ ] **Documentation:** Swagger / OpenAPI with JWT support.
+- [x] **Versioning:** API Versioning enabled (e.g., `/api/v1/...`).
+- [x] **Response Wrapper:** Standard `Result<T>` envelope for consistent JSON responses.
+- [x] **Exception Handling:** Global `IExceptionHandler` implementation (ProblemDetails standard).
 
 ### Operational Essentials
-- **Health Checks:** `/health` (UI), `/health/ready` (DB+Redis), `/health/live`.
-- **Logging:** Serilog (Console, Rolling File, OpenTelemetry).
+- [x] **Health Checks:** `/health` (UI), `/health/ready` (DB+Redis), `/health/live`.
+- [x] **Logging:** Serilog (Console, Rolling File, OpenTelemetry).
 - **Testing:** xUnit + FluentAssertions + Testcontainers (Postgres).
 
 ### Security
-- **Auth:** JWT Bearer Auth + Refresh Tokens.
-- **Identity:** ASP.NET Core Identity (Headless).
+- [x] **Auth:** JWT Bearer Auth + Refresh Tokens.
+- [x] **Identity:** ASP.NET Core Identity (Headless).
 - **Rate Limiting:** Built-in .NET middleware.
 
 ## 💎 Frontend (React 19) - The "Control Panel"

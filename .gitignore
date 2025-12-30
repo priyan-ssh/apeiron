@@ -26,8 +26,11 @@ APEIRON_ACADEMY.md
 # Build Clutter (.NET)
 bin/
 obj/
-*.user
+*.u# User-specific files
 *.suo
+*.user
 *.userosscache
 *.sln.docstates
 
+# CLI Test Output
+cli-test-output/

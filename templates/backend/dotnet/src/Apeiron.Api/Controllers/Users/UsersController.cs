@@ -33,6 +33,16 @@ public class UsersController : BaseApiController
             : NotFound(result.Error);
     }
 
+    [HttpPost("login")]
+    public async Task<ActionResult<LoginResponse>> Login(LoginRequest request)
+    {
+        var result = await _userService.LoginAsync(request);
+
+        return result.IsSuccess 
+            ? Ok(result.Value) 
+            : Unauthorized(result.Error);
+    }
+
     [HttpPost("register")]
     public async Task<ActionResult<UserResponse>> Register(UserRegisterRequest request)
     {

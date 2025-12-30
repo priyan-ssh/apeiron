@@ -8,4 +8,5 @@ public interface IUserService
     Task<Result<UserResponse>> GetByIdAsync(Guid id);
     Task<Result<UserResponse>> GetByEmailAsync(string email);
     Task<Result<UserResponse>> RegisterUserAsync(UserRegisterRequest request);
+    Task<Result<LoginResponse>> LoginAsync(LoginRequest request);
 }
