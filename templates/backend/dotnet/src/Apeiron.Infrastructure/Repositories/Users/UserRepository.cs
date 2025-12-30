@@ -1,9 +1,9 @@
-using Apeiron.Application.Interfaces;
+using Apeiron.Application.Interfaces.Users;
 using Apeiron.Domain.Entities;
 using Apeiron.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Apeiron.Infrastructure.Repositories;
+namespace Apeiron.Infrastructure.Repositories.Users;
 
 public class UserRepository : IUserRepository
 {

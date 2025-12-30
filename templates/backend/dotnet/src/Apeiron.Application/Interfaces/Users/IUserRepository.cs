@@ -1,6 +1,6 @@
 using Apeiron.Domain.Entities;
 
-namespace Apeiron.Application.Interfaces;
+namespace Apeiron.Application.Interfaces.Users;
 
 public interface IUserRepository
 {

@@ -1,5 +1,9 @@
-using Apeiron.Application.Interfaces;
-using Apeiron.Application.Services;
+
+
+using Apeiron.Application.Interfaces.Projects;
+using Apeiron.Application.Interfaces.Users;
+using Apeiron.Application.Services.Projects;
+using Apeiron.Application.Services.Users;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Apeiron.Application;

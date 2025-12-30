@@ -1,6 +1,8 @@
-using Apeiron.Application.Interfaces;
+using Apeiron.Application.Interfaces.Projects;
+using Apeiron.Application.Interfaces.Users;
 using Apeiron.Infrastructure.Persistence;
-using Apeiron.Infrastructure.Repositories;
+using Apeiron.Infrastructure.Repositories.Projects;
+using Apeiron.Infrastructure.Repositories.Users;
 using Apeiron.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

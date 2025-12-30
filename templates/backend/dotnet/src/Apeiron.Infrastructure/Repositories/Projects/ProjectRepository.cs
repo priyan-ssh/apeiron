@@ -1,9 +1,9 @@
-using Apeiron.Application.Interfaces;
+using Apeiron.Application.Interfaces.Projects;
 using Apeiron.Domain.Entities;
 using Apeiron.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Apeiron.Infrastructure.Repositories;
+namespace Apeiron.Infrastructure.Repositories.Projects;
 
 public class ProjectRepository : IProjectRepository
 {
@@ -13,6 +13,8 @@ public class ProjectRepository : IProjectRepository
 
     public async Task<Project?> GetByIdAsync(Guid id) => await _context.Projects.FindAsync(id);
     
+    public async Task<List<Project>> GetAllAsync() => await _context.Projects.ToListAsync();
+
     public IQueryable<Project> Query() => _context.Projects.AsQueryable();
 
     public async Task AddAsync(Project project)

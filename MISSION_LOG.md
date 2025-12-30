@@ -94,6 +94,192 @@ This log captures the core technical questions and design decisions made during 
 **Q: Why was `Microsoft.EntityFrameworkCore.Design` needed in the API?**
 *   **A:** The `dotnet ef` CLI tool needs a "Design-time" bridge to look into the API's configuration (`appsettings.json`) to find the connection string. Without this package in the startup project, the tool is blind.
 
+**Q: Should the test project be part of the template?**
+*   **A:** **YES.** A professional template includes a testing framework by default. It signals that the generated project is ready for industrial use, not just a prototype. We include `tests/` for Unit, Integration, and Architecture (NetArchTest) tests.
+
+**Q: Will I lose my database data if I do `docker compose down`?**
+*   **A:** **NO.** We use **Docker Volumes**. In `docker-compose.yml`, the `postgres_data` volume maps the internal database files to your host machine's disk. Even if the container is deleted, the data lives on. Only `docker compose down -v` (with the `-v` flag) will wipe the data.
+
+**Q: Why don't we put all 'Models' in the Domain?**
+*   **A:** **The Hierarchy of Truth.** 
+    1. **Domain Entities** (`Project.cs`): These are the "Truth." They own the state and the rules of the business.
+    2. **Contracts / DTOs** (`ProjectResponse.cs`): These are the "Promise." They are what we show the outside world. Never expose the Truth directly to the JSON; it creates tight coupling.
+    3. **Application Models** (`Result.cs`): These are the "Envelope." They help us carry the Truth safely through the plumbing.
+
+**Q: Is an 'API Contract' just a document for the frontend?**
+*   **A:** **Partially.** Swagger/OpenAPI is the "Document." But the **Code Contract** (the DTO classes) is the "Manual" that the computer uses to enforce that document. If the document says "I return a Name," the Code Contract ensures the JSON actually has a `string Name`.
+
+**Q: What is the difference between a Contract and a DTO?**
+*   **A:** **Naming & Intent.**
+    *   **DTO (Data Transfer Object)** is the general category. Any object that just carries data is a DTO.
+    *   **Contract** is the specific name for a DTO that we show the **public**. It is our "Signed Promise" to the frontend. All Contracts are DTOs, but we use the term 'Contract' to highlight that these files define the API's face.
+
+**Q: Do we need both 'API Contracts' and 'Application DTOs'?**
+*   **A:** **The 'One-Mirror' Rule.** For APEIRON, No. We only need **one** layer of DTOs (which we call **Contracts**) to mirror the Domain Entities for the public. Creating *another* set of DTOs just for the Application layer to talk to the API layer would be "Over-Engineering." We keep it pragmatic: Domain for state, Contracts for the window.
+
+**Q: Should I use decorators (`[Required]`) or a middleware for validation?**
+*   **A:** **Neither and Both.** We use **FluentValidation** (in the Application layer) plus a **Middleware/Behavior**. 
+    *   **Anti-Pattern**: Using decorators on Contracts (`[Required]`). It’s inflexible and makes your DTOs look like a Christmas tree.
+    *   **Pro-Pattern**: Dedicated Validator classes. It keeps your DTOs clean, allows for complex logic (like checking if a name already exists in the DB), and can be unit tested easily.
+
+**Q: Gemini recommended decorators for type safety. Why is Friday Audit so against them?**
+*   **A:** **The 'Pure vs. Easy' Debate.** 
+    *   **The Easy Way (Decorators)**: `[Required]` is great for small apps. It’s "Easy Type Safety."
+    *   **The APEIRON Way (FluentValidation)**: In .NET 10, we use `required` keywords and `nullable` types for **actual** type safety. We use FluentValidation for **validation logic**. 
+    *   **Why?** Keeping decorators off your DTOs means you can reuse them in different contexts (like a gRPC service or a background worker) without dragging along the ASP.NET Core validation baggage. If you want the "Gemini Hybrid" approach, you *can* use `[EmailAddress]` for quick checks, but our mission is **Industrial Scale**, which demands decoupled logic.
+
+**Q: I want to ship it quick. Which one helps?**
+*   **A:** **Decorators.** If your goal is "MVP in 10 minutes", use `[Required]` and `[EmailAddress]` on your DTOs. It’s built-in, and you don’t have to create extra files. Friday Tech will mock you for it, but Friday PM will love the delivery speed. We’ll offer both in the template: "Quick Start" with decorators, "Pro Mode" with Fluent.
+
+**Q: Is it time-consuming to set up validators? (I had a bad time with Joi).**
+*   **A:** **The Joi Comparison.** Joi (Node.js) can be verbose. In .NET, **FluentValidation** is significantly more streamlined. 
+    *   **The Setup**: You write **one** "Behavior" (the Bouncer) for the whole app. It takes 2 minutes.
+    *   **The Maintenance**: After that, every new validator is just 5-10 lines of code. 
+    *   **The Middleware**: With decorators, you *still* need separate middleware for complex logic. With Fluent, your "middleware" (the Behavior) is universal—it just works for every request automatically. Faster shipping, better security.
+
+**Q: So we make both DTOs... for request and for response?**
+*   **A:** **YES.** It’s about **Symmetry and Privacy.**
+    *   **The Request** (`CreateUserRequest`): Only contains what the user *can* send (e.g., `Password`). It never contains an `Id` because the server hasn't made it yet.
+    *   **The Response** (`UserResponse`): contains what the user *should* see (e.g., `Id`, `CreatedAt`). It **never** contains the `Password`. 
+    *   If you only use one DTO for both, you either accidentally ask the user for an `Id` they don't have, or you accidentally leak their `Password` back to the UI. Don't be that developer.
+
+**Q: Where does 'Contract' fit in the DTO structure?**
+*   **A:** **The Container.** "Contracts" is the name of the **folder** and **namespace**. 
+    *   Folder: `src/Apeiron.Application/Contracts/`
+    *   Content: Inside that folder, you have your `...Request` and `...Response` DTOs.
+    *   Think of it like this: The **Contract** is the whole document; the **Requests** and **Responses** are the specific clauses inside it.
+
+**Q: Is `Result.cs` our Response DTO?**
+*   **A:** **The Envelope vs. The Letter.**
+    *   **The DTO** (`ProjectResponse`): This is the **Letter**. It contains the actual data.
+    *   **The Result** (`Result<ProjectResponse>`): This is the **Envelope**. It tells you if the letter arrived successfully or if there was an error. 
+    *   In your API, you return the `Result` object. The frontend sees `{ isSuccess: true, value: { name: "Project A" } }`. The `value` is your DTO.
+
+**Q: Why is `Error.None` static?**
+*   **A:** **The Singleton of Silence.** 
+    *   `Error.None` represents the state of "Nothing went wrong." 
+    *   Instead of creating a new "Empty Error" object every single time a request succeeds (which wastes memory), we create **one** instance and mark it `static readonly`. 
+    *   It’s a global reference that every success result can point to. It’s faster, cleaner, and uses less memory.
+
+**Q: Isn't a static `Error.None` a race condition waiting to happen?**
+*   **A:** **No, because of Immutability.** 
+    *   **The Guard**: We use `static readonly`. This means the reference can never be changed after the app starts.
+    *   **The Body**: We use a `record`. In C#, records are immutable by default. You can't change the `Code` or `Message` after creation.
+    *   **The Result**: Since no thread can ever *write* to `Error.None`, and everyone is only *reading* the same data, there is zero risk of a race condition. It’s "Read-Only" for everyone, forever.
+
+**Q: Why don't I need to define `Code` and `Message` properties in a record?**
+*   **A:** **Magic of the Record.** When you write `public record Error(string Code, string Message)`, C# automatically creates:
+    1. A constructor that takes `Code` and `Message`.
+    2. Two public, read-only properties named `Code` and `Message`.
+    3. Proper equality checks (two errors with the same code are considered equal).
+    It’s the ultimate "Ship It Quick" feature for C# developers. Adding them manually is like putting a belt on someone who's already wearing suspenders.
+
+**Q: Why are `Success` and `Failure` methods static?**
+*   **A:** **The Factory Pattern.** We use static methods as "factories." Instead of the developer having to remember every constructor parameter, they just call `Result.Success()`. It makes the code read like a sentence.
+
+**Q: What is a `record` exactly?**
+*   **A:** **A Class for Data.** A `record` is a special C# type that is "Immutable" (cannot be changed after creation) and has "Value Equality" (if the data matches, the objects match). It’s perfect for DTOs and Errors where you only care about the values.
+
+**Q: Why use `new` instead of `override` for static methods?**
+*   **A:** **Static Shadowing.** You cannot `override` static methods in C# because they belong to the Class, not the Object. When `Result<T>` has its own `Failure` method, we use the `new` keyword to tell the compiler: "Hide the base version; when people use this typed class, use this version instead."
+
+**Q: Why is only `Failure` using the `new` keyword? Why not `Success`?**
+*   **A:** **Method Overloading vs. Hiding.** 
+    *   **Success**: In the base class, it's `Success()`. In the generic class, it's `Success(T value)`. Because the inputs are different, C# treats them as **Overloads**. They can coexist peacefully.
+    *   **Failure**: Both the base and generic classes have `Failure(Error error)`. Because the inputs are **identical**, the compiler sees a collision. The `new` keyword tells the compiler: "I know they have the same signature; use this one for the generic class."
+
+**Q: Why `ProjectCreateRequest` instead of `CreateProjectRequest`?**
+*   **A:** **Alphabetical Sanity.** If you have 50 models, you want `ProjectCreate`, `ProjectUpdate`, and `ProjectDelete` sitting together in the file explorer. If you start with verbs, your project files are scattered like trash in a windstorm. 10x devs don't hunt for files; they group them.
+
+**Q: Seriously, why records?**
+*   **A:** **Because writing Boilerplate is for Interns.** 
+    *   A `class` needs: Properties, Private backing fields, A constructor, `Equals()` overrides, and `GetHashCode()`. That's 40 lines of noise.
+    *   A `record` needs: **1 line.** 
+    *   If you enjoy typing redundant code, go build a 1x CRUD app. In APEIRON, we use the compiler to do the grunt work.
+
+**Q: Why is the method called `TryHandleAsync` and not something like `CatchAsync`?**
+*   **A:** **The Chain of Responsibility.** 
+    *   In modern .NET, you can have multiple exception handlers. 
+    *   `TryHandleAsync` returns a `bool`. 
+    *   If it returns `true`, it tells the system: "I handled this! Stop looking."
+    *   If it returns `false`, it tells the system: "I don't know this error, let the next handler try."
+    *   Naming it "Catch" would imply it's the end of the road. "TryHandle" acknowledges it's part of a sophisticated sequence.
+
+**Q: What is `IQueryable<Project> Query()` and why is it in my Repository?**
+*   **A:** **The "Double-Edged Sword".**
+    *   **What it is**: It’s a pointer to the database that hasn’t run yet. It allows the Service to say `Query().Where(p => p.Name == "Apeiron")` and the database only fetches that one project.
+    *   **The Benefit**: It's incredibly powerful for Paging and Sorting.
+    *   **The Risk (The Leak)**: In strict Clean Architecture, `IQueryable` is a leak. It forces your Service to know about LINQ-to-SQL details and can cause "Lazy Loading" crashes if you aren't careful.
+    *   **The Friday Rule**: Use `IQueryable` for complex Paging/Filtering, but ALWAYS materialize it (`.ToListAsync()`) before it leaves the Service. Never let an `IQueryable` reach the Controller.
+
+**Q: What is the difference between a Service and a Repository?**
+*   **A:** **The Chef vs. The Pantry.**
+    *   **Repository (The Pantry)**: Its only job is to **get or store stuff**. It doesn't know *why*. It just knows how to talk to PostgreSQL. It has methods like `GetById`, `Add`, `Save`. No business logic allowed.
+    *   **Service (The Chef)**: This is the **Brain**. It decides *what* to do. It checks if the user is allowed to delete a project, it hashes passwords, it sends emails, and it maps data to DTOs. It uses the Repository to get the raw ingredients.
+
+**Q: Why do we return `IQueryable` from Infra instead of keeping the queries there?**
+*   **A:** **Flexibility vs. Purity.** 
+    *   If you put every single query in the Repository (e.g., `GetActiveProjectsWithNameStartingWithA`), your Repository will become a 5,000-line mess of specialized methods.
+    *   By returning `IQueryable`, the Repository says: "Here is the raw data stream. You (the Service) decide how to filter it."
+    *   **The Rule**: The **Infra** provides the *capability* to query, but the **Service** defines the *intent* of the query.
+
+**Q: How does the "Grand Wiring" flow actually work?**
+*   **A:** **The Handshake.** 
+    1.  **Controller**: Receives a `ProjectCreateRequest`. Passes it to the Service.
+    2.  **Service**: Maps the Request to a `Project` (Entity). Saves it via Repo.
+    3.  **Service**: Maps the saved `Project` to a `ProjectResponse`. Returns `Result.Success(response)`.
+    4.  **Controller**: Checks `result.IsSuccess`. If yes, returns `Ok(result.Value)`.
+    *   **The Win**: The Controller never sees the Entity. The Service never sees the HTTP context. Everyone stays in their lane. 
+
+**Q: So we don't have to wrap our call to service in `TryHandleAsync`?**
+*   **A:** **NO.** It’s Automatic. 
+    *   **The Result Pattern (Explicit)**: You use `if (result.IsSuccess)` for things you *expect* to happen (e.g., 404 Not Found, 400 Validation Error).
+    *   **The Exception Handler (Implicit)**: If your database explodes, or a piece of code tries to divide by zero, that throws a raw `Exception`. You don't "catch" this in the controller. You let it "bubble up." 
+    *   **The Middleware**: ASP.NET Core sees the uncaught exception, says "Oh no!", and automatically sends it to your `GlobalExceptionHandler.TryHandleAsync`. 
+    *   **The Win**: Your controller remains clean of `try/catch` blocks. It only handles business results.
+
+**Q: Why does the IDE show yellow lines for `user.FirstName` even after I check `if (user is null)`?**
+*   **A:** **The Overprotective Compiler.** 
+    *   In modern .NET, **Nullable Reference Types (NRTs)** are turned on. 
+    *   If your `User` entity has `string? FirstName`, the compiler sees that '?' and worries that even if the `user` object exists, the `FirstName` field inside it might be null.
+    *   **The Solution**: If you *know* that a field is required in your database (e.g., `FirstName` is never null for a registered user), use the **Null-Forgiving Operator** (`!`). 
+    *   `user.FirstName!` tells the compiler: "Shh, I've checked the database schema, this will never be null here. Stop the warnings."
+
+**Q: What does the Serilog configuration block actually do?**
+*   **A:** **The "Brain" of your Logs.**
+    *   **"Using"**: Tells Serilog which "Sinks" (Destinations) are active.
+    *   **"MinimumLevel"**:
+        *   `Default`: Sets the global noise level.
+        *   `Override`: This is key. It tells Microsoft and System to **shut up** (only show Warnings) so your own Information logs aren't buried in framework junk.
+    *   **"WriteTo"**:
+        *   `Console`: Prints to terminal.
+        *   `Seq`: Sends logs to your local Seq server for searching/graphing.
+    *   **"Enrich"**: This turns a "String" into an **"Object"**. It automatically attaches the MachineName and ThreadId to every single log entry without you typing it.
+
+**Q: We used `WriteTo.Console()` in Program.cs. Do we need to add `.WriteTo.Seq()` there too?**
+*   **A:** **No, if you use "ReadFrom.Configuration".**
+    *   **The Bootstrap Logger**: The code at the very top of `Program.cs` is just a temporary safety measure. It writes to the Console so you can see if the app crashes during the very first second of startup.
+    *   **The Host Logger**: Once the `builder` is created, we tell Serilog to `ReadFrom.Configuration(context.Configuration)`. 
+    *   **The Swap**: This command tells Serilog to **ignore** the hardcoded C# settings and instead look at your `appsettings.json`. Since you have both Console and Seq in your JSON, Serilog will automatically start writing to both. 
+    *   **The Rule**: Keep the C# code minimal. Let the JSON do the heavy lifting.
+
+**Q: Where is Dependency Injection set up and what is the Scope?**
+*   **A:** **The Extension Method Pattern.**
+    *   **The Setup**: We don't clutter `Program.cs`. Instead, each layer has a `DependencyInjection.cs` file.
+        *   `Apeiron.Application` registers Services.
+        *   `Apeiron.Infrastructure` registers Repositories and Database.
+    *   **The Scope**: We use **`AddScoped`**.
+        *   **Why?**: "Scoped" means "One instance per HTTP Request".
+        *   This ensures that if you start a transaction in the Repository, the Service shares the exact same DB connection. It creates a "Bubble of State" for that one user's request, then destroys it when the request finishes.
+
+**Q: What does the `this` keyword mean in `(this IServiceCollection services)`?**
+*   **A:** **The Extension Method (The Glue).**
+    *   **The Syntax**: Putting `this` before the first parameter of a `static` method tells the C# compiler: "Pretend this method belongs to `IServiceCollection`."
+    *   **The Magic**: unique syntax allows you to write:
+        *   `services.AddApplication()` (Fluent/Clean)
+        *   Instead of: `DependencyInjection.AddApplication(services)` (Clumsy/Ugly).
+    *   **The Goal**: It allows us to extend Microsoft's builtin types with our own APEIRON logic without hacking their source code.
+
 ---
 *Log generated by Friday Protocol.*
 
