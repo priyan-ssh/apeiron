@@ -7,6 +7,7 @@ using Apeiron.Infrastructure.Repositories.Projects;
 using Apeiron.Infrastructure.Repositories.Users;
 using Apeiron.Infrastructure.Identity;
 using Apeiron.Infrastructure.Persistence.Interceptors;
+using Apeiron.Infrastructure.Seeders;
 using Apeiron.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -28,10 +29,15 @@ public static class DependencyInjection
                    .AddInterceptors(interceptor);
         });
 
+        // Authentication
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        // Seeder
+        services.AddScoped<DataSeeder>();
+
         // Register Repositories
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         // Register Identity
         services.AddIdentityCore<User>()

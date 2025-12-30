@@ -384,7 +384,7 @@ public record ProjectCreateRequest(
     [StringLength(500)] string Description);
 ```
 
-#### Option B: The "Industrial Grade" (FluentValidation)
+#### Option B: The "Robust" (FluentValidation)
 Use this for production. Create separate validator classes.
 
 ```csharp

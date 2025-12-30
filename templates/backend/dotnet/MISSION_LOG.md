@@ -134,7 +134,7 @@ We added complexity (HybridCache, OpenTelemetry, Auth), but we **tamed it** with
 *   **Cost:** More files (DTOs, Interfaces).
 *   **Gain:** You can change the Database, the Auth Provider, or the Cache without rewriting your business logic.
 
-This is **Industrial Grade**. It feels "heavy" because it carries the weight of reliability.
+This is **Enterprise-Ready**. It feels "heavy" because it carries the weight of reliability.
 
 
 **Q: Why don't we put all 'Models' in the Domain?**

@@ -6,65 +6,114 @@ import fs from 'fs-extra';
 import path from 'path';
 import picocolors from 'picocolors';
 import { fileURLToPath } from 'url';
+import figlet from 'figlet';
+import gradient from 'gradient-string';
 
-const { cyan, green, red, bold } = picocolors;
+
+const { cyan, green, red, bold, yellow } = picocolors;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const program = new Command();
 
+const displayBanner = () => {
+    const banner = figlet.textSync('APEIRON', { font: 'Doom' });
+    const coloredBanner = gradient('red', 'orange', 'gold').multiline(banner);
+    console.log(coloredBanner);
+    console.log(bold(red('  THE FORGE\n')));
+};
+
 program
-    .name('create-apeiron')
-    .description(bold('Friday Protocol: APEIRON Construction Kit'))
+    .name('apeiron')
+    .description('Scaffold a new Production-Ready APEIRON project')
     .version('1.0.0')
-    .argument('[project-directory]', 'Directory to create the project in')
+    .argument('[project-directory]', 'Directory to scaffold the project in')
     .action(async (targetDir) => {
-        console.log(bold(cyan('\n🚀 Initializing APEIRON Protocol...')));
+        const enterAltScreen = () => process.stdout.write('\x1b[?1049h');
+        const exitAltScreen = () => process.stdout.write('\x1b[?1049l');
+
+        let header = ""; // Store header to reprint on exit if needed
+
+        const cleanup = (code = 0) => {
+            exitAltScreen();
+            process.exit(code);
+        };
+
+        process.on('SIGINT', () => {
+            exitAltScreen();
+            console.log(red('✖ Operation aborted by user.'));
+            process.exit(0);
+        });
+
+        enterAltScreen();
+        displayBanner();
 
         let projectDir = targetDir;
+        let features = [];
 
+        // Wizard Mode
         if (!projectDir) {
-            const response = await prompts({
-                type: 'text',
-                name: 'dir',
-                message: 'Where should we deploy the stack?',
-                initial: 'my-apeiron-app'
-            });
+            const response = await prompts([
+                {
+                    type: 'text',
+                    name: 'dir',
+                    message: 'Project Name?',
+                    initial: 'my-apeiron-app'
+                },
+                {
+                    type: 'multiselect',
+                    name: 'features',
+                    message: 'Select Industrial Modules:',
+                    choices: [
+                        { title: 'Authentication (JWT)', value: 'auth', selected: true },
+                        { title: 'Hybrid Caching (Redis)', value: 'cache', selected: true },
+                        { title: 'OpenTelemetry', value: 'otel', selected: true },
+                        { title: 'Docker Compose', value: 'docker', selected: true }
+                    ]
+                }
+            ]);
+
+            if (!response.dir) {
+                exitAltScreen(); // Exit Alt Screen BEFORE printing final message
+                console.log(red('✖ Operation aborted.'));
+                process.exit(1);
+            }
             projectDir = response.dir;
-        }
-
-        if (!projectDir) {
-            console.log(red('✖ Operation aborted. We need a target, sir.'));
-            process.exit(1);
+            features = response.features;
         }
 
         const fullPath = path.resolve(process.cwd(), projectDir);
         const templatesDir = path.resolve(__dirname, '../templates');
 
+        // Check/Clean Directory
         if (fs.existsSync(fullPath)) {
-            const response = await prompts({
+            const { overwrite } = await prompts({
                 type: 'confirm',
                 name: 'overwrite',
-                message: `Target directory ${projectDir} already exists. Wipe it?`,
+                message: `Target directory ${projectDir} exists. Overwrite?`,
                 initial: false
             });
 
-            if (!response.overwrite) {
-                console.log(red('✖ Protocol halted. Preserving existing assets.'));
+            if (!overwrite) {
+                exitAltScreen();
+                console.log(red('✖ Protocol halted.'));
                 process.exit(1);
             }
-
-            console.log(cyan(`\n🧹 Cleaning sector ${projectDir}...`));
             await fs.emptyDir(fullPath);
         } else {
             await fs.ensureDir(fullPath);
         }
 
-        console.log(cyan(`\n📦 Injecting core templates from ${templatesDir}...`));
+        // --- SCAFFOLDING PHASE (Switch back to Main Screen for logs?) ---
+        // Actually, user wants "Back to previous state", implying logs should be in Alt Screen?
+        // OR logs persist? "with necessary history and messages"
+        // Let's keep Scaffolding in Alt Screen, but print FINAL summary after exit.
 
-        // Check if templates exist
+        console.log(cyan(`\n🔧 Scaffolding infrastructure in ${bold(projectDir)}...`));
+
+        // Scaffold (Copy Templates)
         if (!fs.existsSync(templatesDir)) {
+            exitAltScreen();
             console.log(red(`✖ Critical Failure: Templates not found at ${templatesDir}`));
-            console.log(red('  Run "npm run build" or ensure templates directory exists.'));
             process.exit(1);
         }
 
@@ -72,33 +121,33 @@ program
             await fs.copy(templatesDir, fullPath, {
                 filter: (src) => {
                     const basename = path.basename(src);
-                    return basename !== 'node_modules'
-                        && basename !== '.git'
-                        && basename !== 'bin'
-                        && basename !== 'obj'
-                        && basename !== '.vs'
-                        && basename !== '.idea';
+                    return !['node_modules', '.git', 'bin', 'obj', '.vs', '.idea', 'cli-test-output'].includes(basename);
                 }
             });
 
-            console.log(green(`\n✔ Deployment Complete at ${fullPath}`));
+            // Feature Flag logic would go here
+            console.log(green(`\n✔ Base Architecture Deployed.`));
 
+            // Git Init
             try {
-                console.log(cyan('\n📝 Initializing Git repository...'));
                 const { execSync } = await import('child_process');
                 execSync('git init', { cwd: fullPath, stdio: 'ignore' });
-                console.log(green('✔ Git initialized.'));
-            } catch (e) {
-                console.log(picocolors.yellow('⚠ precise git init failed, skipping.'));
-            }
+                console.log(green('✔ Git Repository Initialized.'));
+            } catch (e) { /* ignore */ }
 
-            console.log('\nFriday Protocol recommends:');
+            // --- SUCCESS ---
+            exitAltScreen(); // Restore Terminal
+
+            // Print Summary to Main Buffer
+            console.log(green(`\n✔ APEIRON Deployed: ${bold(projectDir)}`));
+            console.log('\nDeployment Summary:');
             console.log(cyan(`  cd ${projectDir}`));
             console.log(cyan(`  docker-compose up -d --build`));
             console.log(bold('\nSystems Online.'));
 
         } catch (err) {
-            console.error(red('\n✖ Deployment Failed:'), err);
+            exitAltScreen();
+            console.error(red('\n✖ Scaffolding Failed:'), err);
             process.exit(1);
         }
     });

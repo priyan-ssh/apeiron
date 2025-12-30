@@ -1,6 +1,7 @@
 using Apeiron.Application;
 using Apeiron.Application.Common.Models;
 using Apeiron.Infrastructure;
+using Apeiron.Infrastructure.Seeders;
 using Apeiron.Api.Infrastructure;
 using Serilog;
 using OpenTelemetry.Trace;
@@ -9,6 +10,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Asp.Versioning;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
@@ -96,6 +99,19 @@ try
         options.SubstituteApiVersionInUrl = true;
     });
 
+    // Rate Limiting (Phase 2.8)
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddFixedWindowLimiter("fixed", policy =>
+        {
+            policy.PermitLimit = 100;
+            policy.Window = TimeSpan.FromSeconds(10);
+            policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            policy.QueueLimit = 5;
+        });
+    });
+
     // Health Checks
     builder.Services.AddHealthChecks();
 
@@ -106,11 +122,21 @@ try
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+
+        // Run Seeder
+        using (var scope = app.Services.CreateScope())
+        {
+            var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+            await seeder.SeedAsync();
+        }
     }
 
     app.UseHttpsRedirection();
     app.UseCors("AllowAll");
     
+    // Rate Limiting Middleware
+    app.UseRateLimiter();
+
     if (featureFlags.EnableAuth)
     {
         app.UseAuthentication();
@@ -118,7 +144,7 @@ try
 
     app.UseAuthorization();
     app.UseExceptionHandler();
-    app.MapControllers();
+    app.MapControllers().RequireRateLimiting("fixed");
     app.MapHealthChecks("/health");
 
     app.Run();
