@@ -21,7 +21,7 @@ test-project/
 
 # Agent & Education (Local Only)
 .agent/
-APEIRON_ACADEMY.md
+apeiron_academy/
 
 # Build Clutter (.NET)
 bin/
