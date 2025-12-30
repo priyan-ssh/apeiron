@@ -58,7 +58,8 @@ git clone https://github.com/priyan-ssh/apeiron.git
 cd apeiron
 npm install
 npm link
-apeiron my-app
+apeiron                 # Launch Main Menu
+apeiron init            # Launch Wizard immediately
 ```
 
 ## 🔍 Detailed Specification
