@@ -1,4 +1,7 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
+using Apeiron.Infrastructure.Persistence;
 using System.Net.Http.Json;
 using Apeiron.Application.Common.Models;
 using Apeiron.Application.Contracts.Projects;
@@ -25,8 +28,24 @@ public class ProjectsControllerTests : IClassFixture<WebApplicationFactory<Progr
         
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
+            builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=localhost;Database=TestDb;Username=postgres;Password=postgres");
+            
             builder.ConfigureTestServices(services =>
             {
+                // Remove the existing DbContext options (which might demand a connection string)
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<ApeironDbContext>));
+                if (descriptor != null)
+                {
+                    services.Remove(descriptor);
+                }
+
+                // Add InMemory Database
+                services.AddDbContext<ApeironDbContext>(options =>
+                {
+                    options.UseInMemoryDatabase("InMemoryDbForTesting");
+                });
+
                 // Replace the real service with our mock
                 services.AddScoped(_ => _projectServiceMock);
             });

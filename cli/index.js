@@ -56,10 +56,11 @@ program
     .description('Scaffold a new Production-Ready APEIRON project')
     .version('1.0.0')
     .argument('[command]', 'Command to execute (e.g., init)')
-    .action(async (commandArg) => {
+    .argument('[path]', 'Optional project path')
+    .action(async (commandArg, pathArg) => {
         // Handle explicit 'init' command to launch wizard
         if (commandArg === 'init') {
-            await startScaffoldFlow();
+            await startScaffoldFlow(pathArg);
             return;
         }
 

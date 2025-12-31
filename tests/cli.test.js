@@ -26,13 +26,14 @@ describe('APEIRON CLI', () => {
         const projectPath = path.join(TEST_DIR, projectName);
 
         // Run the CLI command
-        // Note: In a real integration test we might need to mock prompts, 
-        // but passing the argument skips the prompt.
-        await execPromise(`node ${CLI_PATH} ${projectPath}`);
+        // Run the CLI command with CI flag
+        const { stdout, stderr } = await execPromise(`APEIRON_CI=true node ${CLI_PATH} init ${projectPath}`);
+        console.log('CLI Stdout:', stdout);
+        console.log('CLI Stderr:', stderr);
 
         // Verify structure
-        const hasFrontend = await fs.pathExists(path.join(projectPath, 'frontend/react/vite.config.ts'));
-        const hasBackend = await fs.pathExists(path.join(projectPath, 'backend/dotnet'));
+        const hasFrontend = await fs.pathExists(path.join(projectPath, 'frontend/vite.config.ts'));
+        const hasBackend = await fs.pathExists(path.join(projectPath, 'backend/Apeiron.slnx'));
 
         expect(hasFrontend).toBe(true);
         expect(hasBackend).toBe(true);

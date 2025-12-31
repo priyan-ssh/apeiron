@@ -5,6 +5,18 @@ import { exitAltScreen } from './ui.js';
 const { red } = picocolors;
 
 export const runWizard = async (defaultProjectName = null) => {
+    // CI/Test Mode Shortcut
+    if (process.env.APEIRON_CI) {
+        return {
+            projectDir: defaultProjectName || 'test-project',
+            backendDirName: 'backend',
+            frontendDirName: 'frontend',
+            useGit: false,
+            selectedStack: 'full',
+            features: ['auth', 'cache', 'otel', 'docker']
+        };
+    }
+
     const questions = [
         {
             type: prev => defaultProjectName ? null : 'text',
